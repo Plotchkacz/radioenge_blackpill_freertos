@@ -128,6 +128,30 @@ const osThreadAttr_t AppSendTask_attributes = {
   .stack_size = sizeof(SendTemperatureBuffer),
   .priority = (osPriority_t) osPriorityLow7,
 };
+/* Definitions for ReadFromADC */
+osThreadId_t ReadFromADCHandle;
+uint32_t ReadFromADCBuffer[ 512 ];
+osStaticThreadDef_t ReadFromADCControlBlock;
+const osThreadAttr_t ReadFromADC_attributes = {
+  .name = "ReadFromADC",
+  .cb_mem = &ReadFromADCControlBlock,
+  .cb_size = sizeof(ReadFromADCControlBlock),
+  .stack_mem = &ReadFromADCBuffer[0],
+  .stack_size = sizeof(ReadFromADCBuffer),
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for PWMTask */
+osThreadId_t PWMTaskHandle;
+uint32_t PWMTaskBuffer[ 512 ];
+osStaticThreadDef_t PWMTaskControlBlock;
+const osThreadAttr_t PWMTask_attributes = {
+  .name = "PWMTask",
+  .cb_mem = &PWMTaskControlBlock,
+  .cb_size = sizeof(PWMTaskControlBlock),
+  .stack_mem = &PWMTaskBuffer[0],
+  .stack_size = sizeof(PWMTaskBuffer),
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* Definitions for uartQueue */
 osMessageQueueId_t uartQueueHandle;
 uint8_t uartQueueBuffer[ 4 * sizeof( void* ) ];
@@ -160,6 +184,28 @@ const osMessageQueueAttr_t ModemSendQueue_attributes = {
   .cb_size = sizeof(ModemSendQueueControlBlock),
   .mq_mem = &ModemSendQueueBuffer,
   .mq_size = sizeof(ModemSendQueueBuffer)
+};
+/* Definitions for TemperatureQueue */
+osMessageQueueId_t TemperatureQueueHandle;
+uint8_t TemperatureQueueBuffer[ 4 * sizeof( void* ) ];
+osStaticMessageQDef_t TemperatureQueueControlBlock;
+const osMessageQueueAttr_t TemperatureQueue_attributes = {
+  .name = "TemperatureQueue",
+  .cb_mem = &TemperatureQueueControlBlock,
+  .cb_size = sizeof(TemperatureQueueControlBlock),
+  .mq_mem = &TemperatureQueueBuffer,
+  .mq_size = sizeof(TemperatureQueueBuffer)
+};
+/* Definitions for ArCondQueue */
+osMessageQueueId_t ArCondQueueHandle;
+uint8_t ArCondQueueBuffer[ 4 * sizeof( void* ) ];
+osStaticMessageQDef_t ArCondQueueControlBlock;
+const osMessageQueueAttr_t ArCondQueue_attributes = {
+  .name = "ArCondQueue",
+  .cb_mem = &ArCondQueueControlBlock,
+  .cb_size = sizeof(ArCondQueueControlBlock),
+  .mq_mem = &ArCondQueueBuffer,
+  .mq_size = sizeof(ArCondQueueBuffer)
 };
 /* Definitions for PeriodicSendTimer */
 osTimerId_t PeriodicSendTimerHandle;
@@ -255,6 +301,8 @@ extern void ATHandlingTaskCode(void *argument);
 extern void UARTProcTaskCode(void *argument);
 extern void ModemManagerTaskCode(void *argument);
 extern void AppSendTaskCode(void *argument);
+extern void ReadFromADCTask(void *argument);
+extern void PWMTaskFunction(void *argument);
 extern void PeriodicSendTimerCallback(void *argument);
 extern void ModemLedCallback(void *argument);
 extern void DutyCycleTimerCallback(void *argument);
@@ -377,6 +425,12 @@ int main(void)
   /* creation of ModemSendQueue */
   ModemSendQueueHandle = osMessageQueueNew (4, sizeof(void*), &ModemSendQueue_attributes);
 
+  /* creation of TemperatureQueue */
+  TemperatureQueueHandle = osMessageQueueNew (4, sizeof(void*), &TemperatureQueue_attributes);
+
+  /* creation of ArCondQueue */
+  ArCondQueueHandle = osMessageQueueNew (4, sizeof(void*), &ArCondQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -399,6 +453,12 @@ int main(void)
 
   /* creation of AppSendTask */
   AppSendTaskHandle = osThreadNew(AppSendTaskCode, NULL, &AppSendTask_attributes);
+
+  /* creation of ReadFromADC */
+  ReadFromADCHandle = osThreadNew(ReadFromADCTask, NULL, &ReadFromADC_attributes);
+
+  /* creation of PWMTask */
+  PWMTaskHandle = osThreadNew(PWMTaskFunction, NULL, &PWMTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
